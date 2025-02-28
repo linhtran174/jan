@@ -2,6 +2,7 @@ import { CodeInterpreterTool } from '../assistant'
 import { ChatCompletionMessage, ChatCompletionRole } from '../inference'
 import { ModelInfo } from '../model'
 import { Thread } from '../thread'
+import { WorkspaceContentValue } from '../workspace/workspaceTypes'
 
 /**
  * The `ThreadMessage` type defines the shape of a thread's message object.
@@ -111,6 +112,7 @@ export enum ErrorCode {
 export enum ContentType {
   Text = 'text',
   Image = 'image_url',
+  Workspace = 'workspace',
 }
 
 /**
@@ -121,7 +123,6 @@ export type ContentValue = {
   value: string
   annotations: string[]
 }
-
 /**
  * The `ImageContentValue` type defines the shape of a content value object of image type
  * @data_transfer_object
@@ -139,6 +140,7 @@ export type ThreadContent = {
   type: ContentType
   text?: ContentValue
   image_url?: ImageContentValue
+  workspace?: WorkspaceContentValue
 }
 
 export interface Attachment {
