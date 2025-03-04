@@ -16,6 +16,7 @@ import ModelReload from '@/containers/Loader/ModelReload'
 import ModelStart from '@/containers/Loader/ModelStart'
 import { fileUploadAtom } from '@/containers/Providers/Jotai'
 import { snackbar } from '@/containers/Toast'
+import WorkspaceContainer from '@/containers/WorkspaceContainer'
 
 import { activeModelAtom } from '@/hooks/useActiveModel'
 import { reloadModelAtom } from '@/hooks/useSendChatMessage'
@@ -30,6 +31,7 @@ import RequestDownloadModel from './RequestDownloadModel'
 import { experimentalFeatureEnabledAtom } from '@/helpers/atoms/AppConfig.atom'
 import { activeAssistantAtom } from '@/helpers/atoms/Assistant.atom'
 import { chatWidthAtom } from '@/helpers/atoms/Setting.atom'
+import { workspaceStateAtom } from '@/helpers/atoms/Workspace.atom'
 import { activeThreadAtom } from '@/helpers/atoms/Thread.atom'
 
 import {
@@ -154,8 +156,19 @@ const ThreadCenterPanel = () => {
   const reloadModel = useAtomValue(reloadModelAtom)
 
   const activeModel = useAtomValue(activeModelAtom)
-
+  
   const isGeneratingResponse = useAtomValue(isGeneratingResponseAtom)
+  
+  // Workspace state
+  const workspaceState = useAtomValue(workspaceStateAtom)
+  const setWorkspaceState = useSetAtom(workspaceStateAtom)
+
+  const handleCloseWorkspace = () => {
+    setWorkspaceState({
+      isOpen: false,
+      workspace: null
+    })
+  }
 
   return (
     <CenterPanelContainer>
@@ -200,29 +213,61 @@ const ThreadCenterPanel = () => {
             </div>
           </div>
         )}
-        <div className={twMerge('flex h-full w-full flex-col justify-between')}>
-          {activeThread ? (
-            <div className="flex h-full w-full overflow-x-hidden">
-              <ChatBody />
-            </div>
-          ) : (
-            <RequestDownloadModel />
-          )}
+        <div className={twMerge('relative flex h-full w-full flex-col justify-between')}>
+         {activeThread ? (
+           <div className="flex h-full w-full overflow-x-hidden relative">
+                         {/* Only render ChatBody when workspace is not open */}
+                         {!(workspaceState.isOpen && workspaceState.workspace) && (
+                           <ChatBody />
+                         )}
+                         
+                         {/* Workspace Container - now as a relative of this div */}
+                         {workspaceState.isOpen && workspaceState.workspace && (
+                           <WorkspaceContainer
+                             workspace={workspaceState.workspace}
+                             isOpen={workspaceState.isOpen}
+                             onClose={handleCloseWorkspace}
+                             textContent={
+                               <div className="workspace-text-content">
+                                 <h1 className="text-2xl font-bold mb-4">
+                                   {workspaceState.workspace.metadata?.title || "Workspace"}
+                                 </h1>
+                                 <div className="mb-6">
+                                   <p>Workspace content for {workspaceState.workspace.metadata?.title || "Untitled"}</p>
+                                 </div>
+                               </div>
+                             }
+                             graphicsContent={
+                               <div className="workspace-graphics-content flex flex-col items-center">
+                                 <div className="mb-8">
+                                   <div className="animate-bounce p-4">
+                                     👋
+                                   </div>
+                                   <p className="text-center text-lg font-medium">Workspace Graphics</p>
+                                 </div>
+                               </div>
+                             }
+                           />
+                         )}
+                       </div>
+         ) : (
+           <RequestDownloadModel />
+         )}
 
-          {!engineParamsUpdate && <ModelStart />}
+         {!engineParamsUpdate && <ModelStart />}
 
-          {reloadModel && <ModelReload />}
+         {reloadModel && <ModelReload />}
 
-          {activeModel && isGeneratingResponse && <GenerateResponse />}
-          <div
-            className={twMerge(
-              'mx-auto w-full',
-              chatWidth === 'compact' && 'max-w-[700px]'
-            )}
-          >
-            <ChatInput />
-          </div>
-        </div>
+         {activeModel && isGeneratingResponse && <GenerateResponse />}
+         <div
+           className={twMerge(
+             'mx-auto w-full',
+             chatWidth === 'compact' && 'max-w-[700px]'
+           )}
+         >
+           <ChatInput />
+         </div>
+       </div>
       </div>
     </CenterPanelContainer>
   )

@@ -17,6 +17,7 @@ import DocMessage from './DocMessage'
 import ImageMessage from './ImageMessage'
 import { MarkdownTextMessage } from './MarkdownTextMessage'
 import ThinkingBlock from './ThinkingBlock'
+import WorkspaceMessage from './WorkspaceMessage'
 
 import { activeAssistantAtom } from '@/helpers/atoms/Assistant.atom'
 import {
@@ -58,13 +59,17 @@ const MessageContainer: React.FC<
       textSegment: text.slice(splitIndex),
     }
   }, [text])
+const image = useMemo(
+  () =>
+    props.content.find((e) => e.type === ContentType.Image)?.image_url?.url,
+  [props.content]
+)
 
-  const image = useMemo(
-    () =>
-      props.content.find((e) => e.type === ContentType.Image)?.image_url?.url,
-    [props.content]
-  )
-
+const workspace = useMemo(
+  () =>
+    props.content.find((e) => e.type === ContentType.Workspace)?.workspace,
+  [props.content]
+)
   const attachedFile = useMemo(() => 'attachments' in props, [props])
 
   return (
@@ -149,6 +154,9 @@ const MessageContainer: React.FC<
                 id={props.attachments?.[0]?.file_id ?? props.id}
                 metadata={props.metadata}
               />
+            )}
+            {workspace && (
+              <WorkspaceMessage workspace={workspace} />
             )}
 
             {editMessage === props.id ? (
