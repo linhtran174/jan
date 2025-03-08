@@ -33,6 +33,7 @@ export const formatTwoDigits = (input: number) => {
   return input.toFixed(2)
 }
 
-export const formatExtensionsName = (input: string) => {
+export const formatExtensionsName = (input: string | undefined) => {
+  if (!input) return 'Unknown Extension'
   return input.replace('@janhq/', '').replaceAll('-', ' ')
 }

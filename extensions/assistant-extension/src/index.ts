@@ -6,15 +6,46 @@ import {
   AssistantExtension,
   AssistantEvent,
   ToolManager,
+  MessageEvent,
+  MessageRequest,
+  WorkspaceEventType,
+  WorkspaceToolRequest,
+  WorkspaceToolResponse,
+  AssistantTool
 } from '@janhq/core'
 import { RetrievalTool } from './tools/retrieval'
+import { WorkspaceTools } from './tools/workspace'
 
 export default class JanAssistantExtension extends AssistantExtension {
   private static readonly _homeDir = 'file://assistants'
+  private static readonly _workspaceDir = 'file://workspace'
+  private tools: WorkspaceTools;
+  
+  constructor(
+    url?: string,
+    name?: string,
+    productName?: string,
+    active?: boolean,
+    description?: string,
+    version?: string
+  ) {
+    super(url, name, productName, active, description, version);
+    this.tools = new WorkspaceTools();
+  }
 
   async onLoad() {
     // Register the retrieval tool
     ToolManager.instance().register(new RetrievalTool())
+
+    // Register all workspace tools
+    this.tools.getAll().forEach(tool => {
+      ToolManager.instance().register(tool);
+    });
+    
+    // Register message handlers for XML parsing
+    events.on(MessageEvent.OnMessageSent, (data: MessageRequest) =>
+      this.handleMessage(data)
+    );
 
     // making the assistant directory
     const assistantDirExist = await fs.existsSync(
@@ -33,12 +64,177 @@ export default class JanAssistantExtension extends AssistantExtension {
       // Update the assistant list
       events.emit(AssistantEvent.OnAssistantsUpdate, {})
     }
+    
+    // Create workspace directory if it doesn't exist
+    const workspaceDirExists = await fs.existsSync(JanAssistantExtension._workspaceDir);
+    if (!workspaceDirExists) {
+      await fs.mkdir(JanAssistantExtension._workspaceDir);
+    }
   }
 
   /**
    * Called when the extension is unloaded.
    */
-  onUnload(): void {}
+  onUnload(): void {
+    // Cleanup event handlers
+    try {
+      events.off(MessageEvent.OnMessageSent, (data: MessageRequest) => this.handleMessage(data));
+    } catch (error) {
+      console.error("Error unregistering message handler:", error);
+    }
+  }
+  
+  private async handleMessage(data: MessageRequest): Promise<void> {
+    if (!data.messages || !data.threadId) return;
+    
+    // Get the last message content
+    const lastMessage = data.messages[data.messages.length - 1];
+    if (!lastMessage || !lastMessage.content) return;
+    
+    // Convert content to string if it's not already
+    const messageContent = typeof lastMessage.content === 'string'
+      ? lastMessage.content
+      : JSON.stringify(lastMessage.content);
+    
+    // Process messages and parse XML-formatted tool commands
+    const xmlCommand = this.parseXmlToolCommand(messageContent, data.threadId);
+    if (xmlCommand) {
+      await this.executeToolCommand(xmlCommand);
+    }
+  }
+  
+  private parseXmlToolCommand(content: string, threadId: string): WorkspaceToolRequest | null {
+    // Parse XML-formatted tool commands
+    const createWorkspaceMatch = content.match(/<create_workspace>([\s\S]*?)<\/create_workspace>/);
+    const modifyDocumentMatch = content.match(/<modify_document_element>([\s\S]*?)<\/modify_document_element>/);
+    const modifyGraphicsMatch = content.match(/<modify_graphics_element>([\s\S]*?)<\/modify_graphics_element>/);
+    
+    let toolRequest: WorkspaceToolRequest | null = null;
+    
+    if (createWorkspaceMatch) {
+      const innerContent = createWorkspaceMatch[1];
+      const nameMatch = innerContent.match(/<workspace_name>([\s\S]*?)<\/workspace_name>/);
+      const docContentMatch = innerContent.match(/<workspace_document_content>([\s\S]*?)<\/workspace_document_content>/);
+      
+      if (nameMatch && docContentMatch) {
+        toolRequest = {
+          toolName: 'create_workspace',
+          parameters: {
+            workspaceName: nameMatch[1].trim(),
+            documentContent: docContentMatch[1].trim()
+          },
+          threadId
+        };
+        
+        // Optional graphics content
+        const graphicsMatch = innerContent.match(/<workspace_graphics_content>([\s\S]*?)<\/workspace_graphics_content>/);
+        if (graphicsMatch) {
+          try {
+            const graphicsContent = JSON.parse(graphicsMatch[1].trim());
+            toolRequest.parameters.graphicsContent = graphicsContent;
+          } catch (e) {
+            console.error('Invalid graphics content JSON', e);
+          }
+        }
+      }
+    } else if (modifyDocumentMatch) {
+      const innerContent = modifyDocumentMatch[1];
+      const workspaceIdMatch = innerContent.match(/<workspace_id>([\s\S]*?)<\/workspace_id>/);
+      const contentMatch = innerContent.match(/<content>([\s\S]*?)<\/content>/);
+      
+      if (workspaceIdMatch && contentMatch) {
+        toolRequest = {
+          toolName: 'modify_document_element',
+          parameters: {
+            workspaceId: workspaceIdMatch[1].trim(),
+            content: contentMatch[1].trim()
+          },
+          threadId
+        };
+      }
+    } else if (modifyGraphicsMatch) {
+      const innerContent = modifyGraphicsMatch[1];
+      const workspaceIdMatch = innerContent.match(/<workspace_id>([\s\S]*?)<\/workspace_id>/);
+      const propertiesMatch = innerContent.match(/<properties>([\s\S]*?)<\/properties>/);
+      
+      if (workspaceIdMatch && propertiesMatch) {
+        try {
+          const properties = JSON.parse(propertiesMatch[1].trim());
+          toolRequest = {
+            toolName: 'modify_graphics_element',
+            parameters: {
+              workspaceId: workspaceIdMatch[1].trim(),
+              properties
+            },
+            threadId
+          };
+        } catch (e) {
+          console.error('Invalid properties JSON', e);
+        }
+      }
+    }
+    
+    return toolRequest;
+  }
+  
+  private async executeToolCommand(toolRequest: WorkspaceToolRequest): Promise<void> {
+    try {
+      // Create an assistant tool object to pass to the InferenceTool
+      const assistantTool: AssistantTool = {
+        type: toolRequest.toolName,
+        enabled: true,
+        settings: toolRequest.parameters
+      };
+      
+      // Create a basic message request with threadId
+      const messageRequest: MessageRequest = {
+        threadId: toolRequest.threadId,
+        attachments: null
+      };
+      
+      // Execute the appropriate tool based on the request
+      switch (toolRequest.toolName) {
+        case 'create_workspace':
+          await this.tools.createWorkspace.process(messageRequest, assistantTool);
+          break;
+          
+        case 'modify_document_element':
+          await this.tools.modifyDocumentElement.process(messageRequest, assistantTool);
+          break;
+          
+        case 'modify_graphics_element':
+          await this.tools.modifyGraphicsElement.process(messageRequest, assistantTool);
+          break;
+          
+        default:
+          console.warn(`Unknown tool: ${toolRequest.toolName}`);
+          return;
+      }
+      
+      // Send result message
+      await this.sendToolResultMessage({
+        success: true
+      }, toolRequest);
+      
+    } catch (error) {
+      console.error('Error executing workspace tool:', error);
+      await this.sendToolResultMessage({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      }, toolRequest);
+    }
+  }
+  
+  private async sendToolResultMessage(response: WorkspaceToolResponse, request: WorkspaceToolRequest): Promise<void> {
+    // Create a message from the system about the tool use result
+    const resultMessage = `[results for ${request.toolName}: ${response.success ? 'success' : 'failure'}${response.error ? ` - ${response.error}` : ''}]`;
+    
+    // Create a message to inform about the tool use result
+    events.emit(MessageEvent.OnMessageResponse, {
+      threadId: request.threadId,
+      content: resultMessage
+    });
+  }
 
   async createAssistant(assistant: Assistant): Promise<void> {
     const assistantDir = await joinPath([
@@ -129,7 +325,7 @@ export default class JanAssistantExtension extends AssistantExtension {
     object: 'assistant',
     created_at: Date.now() / 1000,
     name: 'Jan',
-    description: 'A default assistant that can use all downloaded models',
+    description: 'A default assistant that can use all downloaded models and workspace features',
     model: '*',
     instructions: '',
     tools: [
@@ -150,6 +346,21 @@ QUESTION: {QUESTION}
 Helpful Answer:`,
         },
       },
+      {
+        type: 'create_workspace',
+        enabled: true,
+        settings: {}
+      },
+      {
+        type: 'modify_document_element',
+        enabled: true,
+        settings: {}
+      },
+      {
+        type: 'modify_graphics_element',
+        enabled: true,
+        settings: {}
+      }
     ],
     file_ids: [],
     metadata: undefined,

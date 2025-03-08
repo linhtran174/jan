@@ -111,3 +111,40 @@ export interface WorkspaceAction {
   timestamp: number
   payload?: unknown
 }
+
+/**
+ * Workspace event types for tool operations
+ */
+export enum WorkspaceEventType {
+  WorkspaceCreated = 'workspace_created',
+  DocumentElementModified = 'document_element_modified',
+  GraphicsElementModified = 'graphics_element_modified'
+}
+
+/**
+ * Result of workspace operations performed by tools
+ */
+export interface WorkspaceOperationResult {
+  success: boolean;
+  error?: string;
+  updatedWorkspace?: WorkspaceContentValue;
+}
+
+/**
+ * Workspace tool request format
+ */
+export interface WorkspaceToolRequest {
+  toolName: string;
+  parameters: Record<string, unknown>;
+  threadId: string;
+  messageId?: string;
+}
+
+/**
+ * Workspace tool response format
+ */
+export interface WorkspaceToolResponse {
+  success: boolean;
+  result?: WorkspaceOperationResult;
+  error?: string;
+}
