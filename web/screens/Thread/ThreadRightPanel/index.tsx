@@ -1,11 +1,13 @@
 import { memo, useCallback, useMemo } from 'react'
 
+import AssistantSelector from '@/containers/Assistant/AssistantSelector'
 import {
   InferenceEngine,
   SettingComponentProps,
   SliderComponentProps,
   extractInferenceParams,
   extractModelLoadParams,
+  ThreadAssistantInfo,
 } from '@janhq/core'
 import {
   Tabs,
@@ -39,7 +41,7 @@ import PromptTemplateSetting from './PromptTemplateSetting'
 import Tools from './Tools'
 
 import { experimentalFeatureEnabledAtom } from '@/helpers/atoms/AppConfig.atom'
-import { activeAssistantAtom } from '@/helpers/atoms/Assistant.atom'
+import { assistantsAtom, activeAssistantAtom } from '@/helpers/atoms/Assistant.atom'
 
 import { selectedModelAtom } from '@/helpers/atoms/Model.atom'
 import {
@@ -57,6 +59,7 @@ const ENGINE_SETTINGS = 'Engine Settings'
 const ThreadRightPanel = () => {
   const activeThread = useAtomValue(activeThreadAtom)
   const activeAssistant = useAtomValue(activeAssistantAtom)
+  const assistants = useAtomValue(assistantsAtom)
   const activeModelParams = useAtomValue(getActiveThreadModelParamsAtom)
   const selectedModel = useAtomValue(selectedModelAtom)
   const [activeTabThreadRightPanel, setActiveTabThreadRightPanel] = useAtom(
@@ -232,6 +235,30 @@ const ThreadRightPanel = () => {
       >
         <TabsContent value="assistant">
           <div className="flex flex-col space-y-4 p-4">
+            <AssistantSelector
+              assistants={assistants}
+              activeAssistant={activeAssistant as ThreadAssistantInfo}
+              onAssistantChange={(newAssistant) => {
+                if (activeThread) {
+                  updateThreadMetadata({
+                    ...activeThread,
+                    assistants: [
+                      {
+                        assistant_id: newAssistant.id,
+                        assistant_name: newAssistant.name,
+                        model: activeAssistant?.model || {
+                          id: '*',
+                          settings: {},
+                          parameters: {},
+                        },
+                        instructions: newAssistant.instructions,
+                        tools: newAssistant.tools,
+                      },
+                    ],
+                  });
+                }
+              }}
+            />
             <div>
               <label
                 id="assistant-instructions"

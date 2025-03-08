@@ -1,6 +1,7 @@
-import { Fragment } from 'react'
+import { Fragment, useState } from 'react'
 
 import { Button, Tooltip } from '@janhq/joi'
+import AssistantSelectionDropdown from '@/containers/Assistant/AssistantSelectionDropdown'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import {
   PanelLeftCloseIcon,
@@ -37,6 +38,8 @@ import {
   selectedSettingAtom,
 } from '@/helpers/atoms/Setting.atom'
 import { activeTabThreadRightPanelAtom } from '@/helpers/atoms/ThreadRightPanel.atom'
+// Check if the app is running on macOS
+const isMac = typeof window !== 'undefined' && window?.electronAPI?.isMac
 
 const TopPanel = () => {
   const [showLeftPanel, setShowLeftPanel] = useAtom(showLeftPanelAtom)
@@ -49,6 +52,7 @@ const TopPanel = () => {
   const [activeTabThreadRightPanel, setActiveTabThreadRightPanel] = useAtom(
     activeTabThreadRightPanelAtom
   )
+  const [showAssistantDropdown, setShowAssistantDropdown] = useState(false)
 
   const onCreateNewThreadClick = () => {
     if (!assistants.length)
@@ -57,7 +61,7 @@ const TopPanel = () => {
         description: `Could not create a new thread. Please add an assistant.`,
         type: 'error',
       })
-    requestCreateNewThread(assistants[0])
+    setShowAssistantDropdown(true)
   }
 
   const { isShowStarterScreen } = useStarterScreen()
@@ -105,16 +109,28 @@ const TopPanel = () => {
             </Fragment>
           )}
           {mainViewState === MainViewState.Thread && !isShowStarterScreen && (
-            <Button
-              data-testid="btn-create-thread"
-              onClick={onCreateNewThreadClick}
-              theme="icon"
-            >
-              <PenSquareIcon
-                size={16}
-                className="cursor-pointer text-[hsla(var(--text-secondary))]"
-              />
-            </Button>
+            <div className="relative z-50">
+              <Button
+                data-testid="btn-create-thread"
+                onClick={onCreateNewThreadClick}
+                theme="icon"
+              >
+                <PenSquareIcon
+                  size={16}
+                  className="cursor-pointer text-[hsla(var(--text-secondary))]"
+                />
+              </Button>
+              {showAssistantDropdown && (
+                <AssistantSelectionDropdown
+                  assistants={assistants}
+                  onSelect={(assistant) => {
+                    requestCreateNewThread(assistant);
+                    setShowAssistantDropdown(false);
+                  }}
+                  onClose={() => setShowAssistantDropdown(false)}
+                />
+              )}
+            </div>
           )}
         </div>
         <div className="unset-drag flex items-center gap-x-2">

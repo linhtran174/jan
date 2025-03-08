@@ -8,6 +8,7 @@ import { useGetEngines } from '@/hooks/useEngineManagement'
 import Advanced from '@/screens/Settings/Advanced'
 import ProxySettings from '@/screens/Settings/Advanced/ProxySettings'
 import AppearanceOptions from '@/screens/Settings/Appearance'
+import AssistantsSettings from '@/screens/Settings/Assistants'
 import ExtensionCatalog from '@/screens/Settings/CoreExtensions'
 import Engines from '@/screens/Settings/Engines'
 import LocalEngineSettings from '@/screens/Settings/Engines/LocalEngineSettings'
@@ -26,10 +27,12 @@ const SettingDetail = () => {
   const selectedSetting = useAtomValue(selectedSettingAtom)
   const { engines } = useGetEngines()
   const [subdir, setSubdir] = useState<string | null>(null)
-
   switch (selectedSetting) {
     case 'Engines':
       return <Engines />
+    
+    case 'Assistants':
+      return <AssistantsSettings />
 
     case 'Extensions':
       return <ExtensionCatalog />
