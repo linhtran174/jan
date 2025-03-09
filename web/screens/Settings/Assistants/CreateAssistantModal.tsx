@@ -1,8 +1,9 @@
 import { FC, useState } from 'react'
-import { Assistant } from '@janhq/core'
+import { Assistant, AssistantExtension, ExtensionTypeEnum } from '@janhq/core'
 import { Button, TextArea } from '@janhq/joi'
 import { X } from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
+import { extensionManager } from '@/extension'
 
 interface CreateAssistantModalProps {
   onClose: () => void

@@ -258,11 +258,76 @@ export default class JanAssistantExtension extends AssistantExtension {
     }
   }
 
+  private _defaultWorkspaceAssistant: Assistant = {
+    instructions: `You are a helpful assistant with a set of workspace tools.
+In order to use tools, use the following format:
+<toolName>
+<parameter1_name>parameter1_value</parameter1_name>
+<parameter2_name>parameter2_value</parameter2_name>
+</toolName>
+The list of tools is in the TOOLS section below.
+
+You are equipped with the ability to create a workspace that allows collaborating back-and-forth with the user. Think and evaluate if the user enquiry needs the use of a workspace (always think in <think> tag). If it is, go ahead and create one. If you are unsure, explore the user needs before deciding. 
+
+Popular use case of workspace are:
+- Collaborating on a piece of existing document
+- Planning something
+- Drafting out new ideas 
+- Writing and testing out a piece of code
+
+Workspace consists of 2 part: document part and graphic part.
+Although called that way, due to the technical limitation, the content of both parts are just text. Document part is in markdown format, and graphic part is in HTML which is rendered in an environment with Three.JS support
+
+========== TOOLS ==========
+1. Create workspace tool 
+- toolName: create_workspace
+- parameters: 
+-- workspace_name
+-- workspace_document_content
+-- workspace_graphics_content
+
+2. Modify workspace document 
+- toolName: modify_document_content
+- parameters:
+-- content
+
+3. Modify workspace graphics
+- toolName: modify_graphic_content
+- parameters:
+-- content
+
+    `,
+    description: "Experimental assistant with workspace tools",
+    avatar: '',
+    thread_location: '',
+    id: 'workspace-experimental',
+    object: '',
+    created_at: 0,
+    name: 'Joel',
+    model: 'claude-3.7-sonnet',
+    file_ids: [],
+    tools: [{
+      type: 'create_workspace',
+      enabled: true,
+      settings: {}
+    },
+    {
+      type: 'modify_document_element',
+      enabled: true,
+      settings: {}
+    },
+    {
+      type: 'modify_graphics_element',
+      enabled: true,
+      settings: {}
+    }]
+  }
+
   async getAssistants(): Promise<Assistant[]> {
     try {
       // get all the assistant directories
       // get all the assistant metadata json
-      const results: Assistant[] = []
+      const results: Assistant[] = [this._defaultWorkspaceAssistant]
 
       const allFileName: string[] = await fs.readdirSync(
         JanAssistantExtension._homeDir
@@ -345,21 +410,6 @@ QUESTION: {QUESTION}
 ----------------
 Helpful Answer:`,
         },
-      },
-      {
-        type: 'create_workspace',
-        enabled: true,
-        settings: {}
-      },
-      {
-        type: 'modify_document_element',
-        enabled: true,
-        settings: {}
-      },
-      {
-        type: 'modify_graphics_element',
-        enabled: true,
-        settings: {}
       }
     ],
     file_ids: [],

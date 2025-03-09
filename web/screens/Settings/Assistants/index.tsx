@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useAtom } from 'jotai'
 import { Button } from '@janhq/joi'
-import { Assistant } from '@janhq/core'
+import { Assistant, AssistantExtension, ExtensionTypeEnum } from '@janhq/core'
 import { PlusIcon } from 'lucide-react'
 import { assistantsAtom } from '@/helpers/atoms/Assistant.atom'
 import AssistantCard from './AssistantCard'
 import CreateAssistantModal from './CreateAssistantModal'
 import EditAssistantModal from './EditAssistantModal'
+import { extensionManager } from '@/extension'
 
 const AssistantsSettings = () => {
   const [assistants, setAssistants] = useAtom(assistantsAtom)
@@ -17,11 +18,19 @@ const AssistantsSettings = () => {
     // TODO: Add confirmation dialog
     setAssistants((prev) => prev.filter((a) => a.id !== assistant.id))
     // TODO: Add API call to delete assistant
+    extensionManager.get<AssistantExtension>(ExtensionTypeEnum.Assistant)
+    ?.deleteAssistant(assistant)
+    .catch(() => {})
   }
 
   const handleCreateAssistant = (assistant: Assistant) => {
     setAssistants((prev) => [...prev, assistant])
     // TODO: Add API call to create assistant
+
+    extensionManager.get<AssistantExtension>(ExtensionTypeEnum.Assistant)
+    ?.createAssistant(assistant)
+    .catch(() => {})
+    
     setShowCreateModal(false)
   }
 

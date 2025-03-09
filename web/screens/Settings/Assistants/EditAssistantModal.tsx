@@ -1,7 +1,8 @@
 import { FC, useState, useEffect } from 'react'
-import { Assistant } from '@janhq/core'
+import { Assistant, AssistantExtension } from '@janhq/core'
 import { Button, TextArea } from '@janhq/joi'
 import { X } from 'lucide-react'
+import { extensionManager } from '@/extension'
 
 interface EditAssistantModalProps {
   assistant: Assistant
