@@ -1,15 +1,61 @@
 'use client'
 
-import React, { ReactNode } from 'react'
+import React, { ReactNode, useRef, useEffect } from 'react'
 import { twMerge } from 'tailwind-merge'
+import Markdown from 'react-markdown'
+import WorkspaceGraphicsContainer from './WorkspaceGraphicsContainer'
 
 type WorkspaceMode = 'text' | 'graphics'
 
 interface WorkspaceContentProps {
   activeMode: WorkspaceMode
-  textContent?: ReactNode
-  graphicsContent?: ReactNode
+  textContent?: string
+  graphicsContent?: string
 }
+
+interface GraphicsRendererProps {
+  content: string
+}
+
+const GraphicsRenderer: React.FC<GraphicsRendererProps> = ({ content }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Insert HTML content
+    containerRef.current.innerHTML = content;
+
+    // Execute scripts in the content
+    // const scripts = containerRef.current.getElementsByTagName('script');
+    // Array.from(scripts).forEach(oldScript => {
+    //   const newScript = document.createElement('script');
+    //   Array.from(oldScript.attributes).forEach(attr => {
+    //     newScript.setAttribute(attr.name, attr.value);
+    //   });
+    //   newScript.text = oldScript.text;
+    //   oldScript.parentNode?.replaceChild(newScript, oldScript);
+    // });
+
+    // // Cleanup function
+    // return () => {
+    //   if (containerRef.current) {
+    //     // Find and dispose Three.js renderers if they exist
+    //     const renderers = containerRef.current.querySelectorAll('canvas');
+    //     renderers.forEach(canvas => {
+    //       const renderer = (window as any).__THREE_RENDERERS__?.get(canvas);
+    //       if (renderer) {
+    //         renderer.dispose();
+    //         (window as any).__THREE_RENDERERS__?.delete(canvas);
+    //       }
+    //     });
+    //     containerRef.current.innerHTML = '';
+    //   }
+    // };
+  }, [content]);
+
+  return <div ref={containerRef} className="w-full h-full" />;
+};
 
 const WorkspaceContent: React.FC<WorkspaceContentProps> = ({
   activeMode,
@@ -23,20 +69,30 @@ const WorkspaceContent: React.FC<WorkspaceContentProps> = ({
     >
       <div
         className={twMerge(
-          "transition-opacity duration-200",
+          "h-full transition-opacity duration-200",
           activeMode === 'text' ? "block opacity-100" : "hidden opacity-0"
         )}
       >
-        {textContent || <p>No text content available</p>}
+        <Markdown className="markdown-content message">
+          {textContent || "No text content available"}
+        </Markdown>
       </div>
-      
+
       <div
         className={twMerge(
-          "transition-opacity duration-200",
+          "h-full transition-opacity duration-200",
           activeMode === 'graphics' ? "block opacity-100" : "hidden opacity-0"
         )}
       >
-        {graphicsContent || <p>No graphics content available</p>}
+        {graphicsContent ? (
+          <WorkspaceGraphicsContainer>
+            <GraphicsRenderer content={graphicsContent} />
+          </WorkspaceGraphicsContainer>
+        ) : (
+          <WorkspaceGraphicsContainer>
+            <p>No graphics content available</p>
+          </WorkspaceGraphicsContainer>
+        )}
       </div>
     </div>
   )

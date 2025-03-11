@@ -11,7 +11,6 @@ import HubScreen from '@/screens/Hub'
 import LocalServerScreen from '@/screens/LocalServer'
 import SettingsScreen from '@/screens/Settings'
 import ThreadScreen from '@/screens/Thread'
-import WorkspaceDemoInitializer from '@/containers/WorkspaceDemo'
 
 import {
   mainViewStateAtom,
@@ -59,8 +58,6 @@ const MainViewContainer = () => {
       className={twMerge('relative flex w-[calc(100%-48px)]')}
       style={{ height: `calc(100% - ${height}px)` }}
     >
-      {/* Workspace Demo Initializer */}
-      <WorkspaceDemoInitializer />
       
       <div className="w-full">
         <m.div

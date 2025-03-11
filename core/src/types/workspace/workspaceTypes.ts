@@ -14,13 +14,14 @@ export interface WorkspaceElementBase {
  * @data_transfer_object
  */
 export interface CanvasElement extends WorkspaceElementBase {
-  type: 'webgl' | "webgpu" 
+  type: "graphic"
   properties: {
     width?: number
     height?: number
     transform?: string
     opacity?: number
   }
+  content: string
 }
 
 /**
@@ -28,7 +29,7 @@ export interface CanvasElement extends WorkspaceElementBase {
  * @data_transfer_object
  */
 export interface DocumentElement extends WorkspaceElementBase {
-  type: 'paragraph' | 'code' | 'heading' | 'list' | 'table' | 'image'
+  type: "doc"
   content: {
     // Common properties
     text?: string

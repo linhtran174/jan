@@ -1,4 +1,4 @@
-import { Assistant, AssistantInterface } from '../../types'
+import { Assistant, AssistantInterface, WorkspaceContentValue } from '../../types'
 import { BaseExtension, ExtensionTypeEnum } from '../extension'
 
 /**
@@ -16,4 +16,8 @@ export abstract class AssistantExtension extends BaseExtension implements Assist
   abstract createAssistant(assistant: Assistant): Promise<void>
   abstract deleteAssistant(assistant: Assistant): Promise<void>
   abstract getAssistants(): Promise<Assistant[]>
+
+  abstract getWorkspaces(): Promise<WorkspaceContentValue[]>
+  abstract createWorkspace(workspace: WorkspaceContentValue): Promise<string>
+  abstract updateWorkspace(workspace: WorkspaceContentValue): Promise<void>
 }

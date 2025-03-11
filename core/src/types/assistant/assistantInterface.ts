@@ -1,3 +1,4 @@
+import { WorkspaceContentValue } from '../workspace'
 import { Assistant } from './assistantEntity'
 /**
  * Assistant extension for managing assistants.
@@ -23,4 +24,8 @@ export interface AssistantInterface {
    * @returns {Promise<Assistant[]>} A promise that resolves to an array of all assistants.
    */
   getAssistants(): Promise<Assistant[]>
+
+  getWorkspaces(): Promise<WorkspaceContentValue[]>
+  createWorkspace(workspace: WorkspaceContentValue): Promise<string>
+  updateWorkspace(workspace: WorkspaceContentValue): Promise<void>
 }

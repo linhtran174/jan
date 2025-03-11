@@ -20,8 +20,6 @@ const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
   workspace,
   isOpen,
   onClose,
-  textContent,
-  graphicsContent
 }) => {
   const [activeMode, setActiveMode] = useState<WorkspaceMode>('text')
 
@@ -32,12 +30,12 @@ const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
   if (!isOpen) return null
   
   return (
-    <div className="absolute inset-0 z-10 w-full h-full">
+    <div className="w-full flex justify-center py-2">
       <div
         className={twMerge(
-          "flex flex-col w-full h-full bg-[hsla(var(--app-bg))] shadow-xl",
-          "border-[hsla(var(--app-border))] overflow-hidden",
-          "transition-all duration-200 transform rounded-lg m-2",
+          "flex flex-col w-full max-h-[40vh] bg-[hsla(var(--app-bg))] shadow-xl",
+          "border border-[hsla(var(--app-border))] overflow-hidden",
+          "transition-all duration-200 transform rounded-lg mx-2",
           isOpen ? "scale-100 opacity-100" : "scale-95 opacity-0 pointer-events-none"
         )}
       >
@@ -50,8 +48,8 @@ const WorkspaceContainer: React.FC<WorkspaceContainerProps> = ({
         
         <WorkspaceContent 
           activeMode={activeMode}
-          textContent={textContent}
-          graphicsContent={graphicsContent}
+          textContent={workspace.elements.find(w=>w.type=="doc")?.content.text}
+          graphicsContent={workspace.elements.find(w=>w.type=="graphic")?.content}
         />
       </div>
     </div>

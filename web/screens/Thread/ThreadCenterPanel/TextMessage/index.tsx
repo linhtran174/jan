@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 
-import { ChatCompletionRole, ContentType, ThreadMessage } from '@janhq/core'
+import { ChatCompletionRole, ContentType, createWorkspace, ThreadMessage } from '@janhq/core'
 
 import { useAtomValue } from 'jotai'
 import 'katex/dist/katex.min.css'
@@ -45,31 +45,65 @@ const MessageContainer: React.FC<
     [props.content]
   )
 
-  const { reasoningSegment, textSegment } = useMemo(() => {
+  const workspaceCreate = 
+    text.match(/<create_workspace>([\s\S]*?)<\/create_workspace>/)
+  const { reasoningSegment, textSegment, workspaceSegment  } = useMemo(() => {
     const isThinking = text.includes('<think>') && !text.includes('</think>')
+    // const creatingWorkspace = text.includes('<create_workspace>') && !text.includes('</create_workspace>')
+
     if (isThinking) return { reasoningSegment: text, textSegment: '' }
 
-    const match = text.match(/<think>([\s\S]*?)<\/think>/)
-    if (match?.index === undefined)
-      return { reasoningSegment: undefined, textSegment: text }
+    const thinkingMatch  = text.match(/<think>([\s\S]*?)<\/think>/)
+    const thinkingFailed = thinkingMatch?.index === undefined
+    const workspaceStartMatch = text.match(/<create_workspace>/) || text.match(/<modify_document_content>/) || text.match(/<modify_graphic_content>/)
+    const createWorkspaceMatch = text.match(/<create_workspace>([\s\S]*?)<\/create_workspace>/)
+    // const modifydocMatch 
+    const workspaceBlockMatch = createWorkspaceMatch || 
+    text.match(/<modify_document_content>([\s\S]*?)<\/modify_document_content>/) ||
+    text.match(/<modify_graphic_content>([\s\S]*?)<\/modify_graphic_content>/)
+    
+    const workspaceToolFailed = workspaceBlockMatch?.index === undefined
+    
+    if (thinkingFailed && workspaceToolFailed){
+      if(!workspaceStartMatch) return { reasoningSegment: undefined, textSegment: text, workspaceSegment: undefined }
+      return { reasoningSegment: undefined, textSegment: undefined, workspaceSegment: undefined }
+    }
+      
 
-    const splitIndex = match.index + match[0].length
+    let startOfTextSegment = 0;
+    let reasoningSegment = undefined;
+    if(!thinkingFailed && thinkingMatch?.index !== undefined){
+      reasoningSegment = text.slice(thinkingMatch.index, thinkingMatch.index + thinkingMatch[0].length)
+      startOfTextSegment = thinkingMatch.index + thinkingMatch[0].length
+    }
+    let workspaceSegment = undefined;
+
+    // createWorkspace logic 
+    if(!workspaceToolFailed && workspaceBlockMatch.index !== undefined){
+      workspaceSegment = text.slice(workspaceBlockMatch.index, workspaceBlockMatch.index + workspaceBlockMatch[0].length)
+
+
+      startOfTextSegment = workspaceBlockMatch.index + workspaceBlockMatch[0].length
+    }
+
     return {
-      reasoningSegment: text.slice(0, splitIndex),
-      textSegment: text.slice(splitIndex),
+      reasoningSegment,
+      textSegment: text.slice(startOfTextSegment),
+      workspaceSegment
     }
   }, [text])
-const image = useMemo(
-  () =>
-    props.content.find((e) => e.type === ContentType.Image)?.image_url?.url,
-  [props.content]
-)
 
-const workspace = useMemo(
-  () =>
-    props.content.find((e) => e.type === ContentType.Workspace)?.workspace,
-  [props.content]
-)
+  const image = useMemo(
+    () =>
+      props.content.find((e) => e.type === ContentType.Image)?.image_url?.url,
+    [props.content]
+  )
+
+  const workspace = useMemo(
+    () =>
+      props.content.find((e) => e.type === ContentType.Workspace)?.workspace,
+    [props.content]
+  )
   const attachedFile = useMemo(() => 'attachments' in props, [props])
 
   return (
@@ -155,8 +189,8 @@ const workspace = useMemo(
                 metadata={props.metadata}
               />
             )}
-            {workspace && (
-              <WorkspaceMessage workspace={workspace} />
+            {workspaceSegment && (
+              <WorkspaceMessage text={workspaceSegment} />
             )}
 
             {editMessage === props.id ? (
@@ -177,7 +211,7 @@ const workspace = useMemo(
                     status={props.status}
                   />
                 )}
-                <MarkdownTextMessage text={textSegment} isUser={isUser} />
+                {textSegment && <MarkdownTextMessage text={textSegment} isUser={isUser} />}
               </div>
             )}
           </>

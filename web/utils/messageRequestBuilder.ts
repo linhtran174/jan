@@ -9,6 +9,7 @@ import {
   ModelInfo,
   Thread,
   ThreadMessage,
+  WorkspaceContentValue,
 } from '@janhq/core'
 import { ulid } from 'ulidx'
 
@@ -116,6 +117,28 @@ export class MessageRequestBuilder {
 
     this.messages = [...this.messages, message]
     return this
+  }
+
+  // Chainable
+  addWorkspaceMessage(workspace: WorkspaceContentValue){
+    let text = `[Workspace id ${workspace.workspaceId} content]: \n`;
+    text += "<workspace_document_content>";
+    text += workspace.elements.find(e=>e.type=="doc")?.content.text;
+    text += "</workspace_document_content>";
+    text += "<workspace_graphic_content>";
+    text += workspace.elements.find(e=>e.type=="graphic")?.content;
+    text += "</workspace_graphic_content>";
+    const message: ChatCompletionMessage = {
+      role: ChatCompletionRole.User,
+      content: [
+        {
+          type: ChatCompletionMessageContentType.Text,
+          text: "text",
+        } as ChatCompletionMessageContentText
+      ] as ChatCompletionMessageContent
+    }
+    this.messages = [...this.messages, message]
+    return this 
   }
 
   removeLastAssistantMessage() {

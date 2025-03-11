@@ -5,6 +5,7 @@ import {
   MessageStatus,
   ThreadContent,
   ThreadMessage,
+  WorkspaceContentValue,
 } from '@janhq/core'
 
 import { MessageRequestBuilder } from './messageRequestBuilder'
@@ -76,6 +77,16 @@ export class ThreadMessageBuilder {
       }
     }
 
+    return this
+  }
+
+  pushWorkspaceRef(
+    workspace: WorkspaceContentValue
+  ){
+    this.content.push({
+      type: ContentType.Workspace,
+      workspace
+    })
     return this
   }
 }

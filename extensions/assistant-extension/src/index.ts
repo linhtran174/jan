@@ -11,12 +11,15 @@ import {
   WorkspaceEventType,
   WorkspaceToolRequest,
   WorkspaceToolResponse,
-  AssistantTool
+  AssistantTool,
+  WorkspaceContentValue,
 } from '@janhq/core'
 import { RetrievalTool } from './tools/retrieval'
 import { WorkspaceTools } from './tools/workspace'
+import { ulid } from 'ulidx';
 
 export default class JanAssistantExtension extends AssistantExtension {
+ 
   private static readonly _homeDir = 'file://assistants'
   private static readonly _workspaceDir = 'file://workspace'
   private tools: WorkspaceTools;
@@ -36,16 +39,12 @@ export default class JanAssistantExtension extends AssistantExtension {
   async onLoad() {
     // Register the retrieval tool
     ToolManager.instance().register(new RetrievalTool())
-
-    // Register all workspace tools
-    this.tools.getAll().forEach(tool => {
-      ToolManager.instance().register(tool);
-    });
     
     // Register message handlers for XML parsing
-    events.on(MessageEvent.OnMessageSent, (data: MessageRequest) =>
+    events.on(MessageEvent.OnMessageSent, (data: MessageRequest) =>{
       this.handleMessage(data)
-    );
+      console.log("MessageEvent received from AssistantExtension")
+    });
 
     // making the assistant directory
     const assistantDirExist = await fs.existsSync(
@@ -177,6 +176,50 @@ export default class JanAssistantExtension extends AssistantExtension {
     return toolRequest;
   }
   
+  public async createWorkspace(workspace: WorkspaceContentValue): Promise<string>{
+    let id = ulid();
+    workspace.workspaceId = id
+    let content = await fs.readFileSync(JanAssistantExtension._workspaceDir + "/workspaces.json");
+    try {
+      let workspaces = JSON.parse(content);
+      workspaces.push(workspace);
+      await fs.writeFileSync(JanAssistantExtension._workspaceDir + "/workspaces.json", JSON.stringify(workspaces))
+    }
+    catch (e){
+      console.error(`update workspace failed: ${e}`)
+    }
+    return id;
+  }
+
+  public async updateWorkspace(workspace: WorkspaceContentValue): Promise<void>{
+    let id = workspace.workspaceId;
+    let content = await fs.readFileSync(JanAssistantExtension._workspaceDir + "/workspaces.json");
+
+    try {
+      let workspaces = JSON.parse(content);
+      let w = workspaces.find(w => w.workspaceId == id);
+      if(!w) throw Error(`Workspace ${id} does not exists`);
+
+      w = workspace;
+
+      await fs.writeFileSync(JanAssistantExtension._workspaceDir + "/workspaces.json", JSON.stringify(workspaces))
+    }
+    catch (e){
+      console.error(`update workspace failed: ${e}`)
+    }
+    
+  }
+
+  public async getWorkspaces(): Promise<WorkspaceContentValue[]> {
+    try{
+      let content = await fs.readFileSync(JanAssistantExtension._workspaceDir + "/workspaces.json");
+      return JSON.parse(content);
+    }
+    catch(err){
+      console.error(err);
+    }
+  }
+
   private async executeToolCommand(toolRequest: WorkspaceToolRequest): Promise<void> {
     try {
       // Create an assistant tool object to pass to the InferenceTool
@@ -259,15 +302,8 @@ export default class JanAssistantExtension extends AssistantExtension {
   }
 
   private _defaultWorkspaceAssistant: Assistant = {
-    instructions: `You are a helpful assistant with a set of workspace tools.
-In order to use tools, use the following format:
-<toolName>
-<parameter1_name>parameter1_value</parameter1_name>
-<parameter2_name>parameter2_value</parameter2_name>
-</toolName>
-The list of tools is in the TOOLS section below.
-
-You are equipped with the ability to create a workspace that allows collaborating back-and-forth with the user. Think and evaluate if the user enquiry needs the use of a workspace (always think in <think> tag). If it is, go ahead and create one. If you are unsure, explore the user needs before deciding. 
+    instructions: `You are a helpful assistant with a set of workspace tools. Refer to the TOOLS section below in order to use tools.
+Think and evaluate if the user enquiry needs the use of a workspace (always think in <think> tag). If it is, go ahead and create one. If you are unsure, explore the user needs before deciding. 
 
 Popular use case of workspace are:
 - Collaborating on a piece of existing document
@@ -279,24 +315,51 @@ Workspace consists of 2 part: document part and graphic part.
 Although called that way, due to the technical limitation, the content of both parts are just text. Document part is in markdown format, and graphic part is in HTML which is rendered in an environment with Three.JS support
 
 ========== TOOLS ==========
-1. Create workspace tool 
+In order to use tools, it is IMPORTANT to use the exact following format:
+<toolName>
+<parameter1_name>parameter1_value</parameter1_name>
+<parameter2_name>parameter2_value</parameter2_name>
+</toolName>
+
+1. Create workspace 
 - toolName: create_workspace
 - parameters: 
 -- workspace_name
+-- title
 -- workspace_document_content
 -- workspace_graphics_content
 
 2. Modify workspace document 
 - toolName: modify_document_content
 - parameters:
--- content
+-- newContent
 
 3. Modify workspace graphics
 - toolName: modify_graphic_content
 - parameters:
--- content
+-- newContent
 
-    `,
+========= EXAMPLE ========
+1. Create a workspace: 
+<create_workspace>
+<title>This is the title of the workspace</title>
+<workspace_document_content>
+# Heading
+This is a document, version 1
+</workspace_document_content>
+<workspace_graphic_content>
+<canvas></canvas>
+</workspace_graphic_content>
+</create_workspace>
+
+2.Modify workspace:
+<modify_document_content>
+<newContent>
+# Heading
+This is a document, version 2
+</newContent>
+</modify_document_content>
+`,
     description: "Experimental assistant with workspace tools",
     avatar: '',
     thread_location: '',

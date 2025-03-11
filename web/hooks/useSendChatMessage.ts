@@ -47,6 +47,7 @@ import {
   updateThreadAtom,
   updateThreadWaitingForResponseAtom,
 } from '@/helpers/atoms/Thread.atom'
+import { workspaceStateAtom } from '@/helpers/atoms/Workspace.atom'
 
 export const reloadModelAtom = atom(false)
 
@@ -59,6 +60,8 @@ export default function useSendChatMessage() {
   const setCurrentPrompt = useSetAtom(currentPromptAtom)
   const deleteMessage = useSetAtom(deleteMessageAtom)
   const setEditPrompt = useSetAtom(editPromptAtom)
+
+  const workspaceState = useAtomValue(workspaceStateAtom)
 
   const currentMessages = useAtomValue(getCurrentChatMessagesAtom)
   const selectedModel = useAtomValue(selectedModelAtom)
@@ -124,7 +127,7 @@ export default function useSendChatMessage() {
       console.error('No active thread or assistant')
       return
     }
-
+    
     if (selectedModelRef.current?.id === undefined) {
       setModelDropdownState(true)
       return
@@ -176,12 +179,20 @@ export default function useSendChatMessage() {
       messages ?? currentMessages
     ).addSystemMessage(activeAssistantRef.current?.instructions)
 
+    if(workspaceState.isOpen && workspaceState.workspace){
+      requestBuilder.addWorkspaceMessage(workspaceState.workspace)
+    }
+
     requestBuilder.pushMessage(prompt, base64Blob, fileUpload)
 
     // Build Thread Message to persist
     const threadMessageBuilder = new ThreadMessageBuilder(
       requestBuilder
     ).pushMessage(prompt, base64Blob, fileUpload)
+
+    if(workspaceState.isOpen && workspaceState.workspace){
+      threadMessageBuilder.pushWorkspaceRef(workspaceState.workspace);
+    }
 
     const newMessage = threadMessageBuilder.build()
 

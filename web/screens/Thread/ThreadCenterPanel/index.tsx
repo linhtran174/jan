@@ -164,10 +164,12 @@ const ThreadCenterPanel = () => {
   const setWorkspaceState = useSetAtom(workspaceStateAtom)
 
   const handleCloseWorkspace = () => {
-    setWorkspaceState({
+    // Use functional update to ensure we have the latest state
+    setWorkspaceState(prevState => ({
+      ...prevState,
       isOpen: false,
       workspace: null
-    })
+    }))
   }
 
   return (
@@ -216,40 +218,17 @@ const ThreadCenterPanel = () => {
         <div className={twMerge('relative flex h-full w-full flex-col justify-between')}>
          {activeThread ? (
            <div className="flex h-full w-full overflow-x-hidden relative">
-                         {/* Only render ChatBody when workspace is not open */}
-                         {!(workspaceState.isOpen && workspaceState.workspace) && (
-                           <ChatBody />
-                         )}
-                         
-                         {/* Workspace Container - now as a relative of this div */}
-                         {workspaceState.isOpen && workspaceState.workspace && (
-                           <WorkspaceContainer
-                             workspace={workspaceState.workspace}
-                             isOpen={workspaceState.isOpen}
-                             onClose={handleCloseWorkspace}
-                             textContent={
-                               <div className="workspace-text-content">
-                                 <h1 className="text-2xl font-bold mb-4">
-                                   {workspaceState.workspace.metadata?.title || "Workspace"}
-                                 </h1>
-                                 <div className="mb-6">
-                                   <p>Workspace content for {workspaceState.workspace.metadata?.title || "Untitled"}</p>
-                                 </div>
-                               </div>
-                             }
-                             graphicsContent={
-                               <div className="workspace-graphics-content flex flex-col items-center">
-                                 <div className="mb-8">
-                                   <div className="animate-bounce p-4">
-                                     👋
-                                   </div>
-                                   <p className="text-center text-lg font-medium">Workspace Graphics</p>
-                                 </div>
-                               </div>
-                             }
-                           />
-                         )}
-                       </div>
+             <ChatBody />
+             {workspaceState.isOpen && workspaceState.workspace && (
+               <div className="absolute top-0 left-0 right-0 z-50 bg-[hsla(var(--app-bg))] bg-opacity-90">
+                 <WorkspaceContainer
+                   workspace={workspaceState.workspace}
+                   isOpen={workspaceState.isOpen}
+                   onClose={handleCloseWorkspace}
+                 />
+               </div>
+             )}
+           </div>
          ) : (
            <RequestDownloadModel />
          )}
